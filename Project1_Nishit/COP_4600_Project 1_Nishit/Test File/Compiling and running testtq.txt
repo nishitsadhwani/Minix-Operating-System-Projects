@@ -1,0 +1,2 @@
+# gcc testtq.c -o testtq
+# ./testtq

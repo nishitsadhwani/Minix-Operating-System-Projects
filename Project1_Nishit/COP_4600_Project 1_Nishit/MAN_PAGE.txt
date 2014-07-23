@@ -1,0 +1,66 @@
+/*
+**************************************************************************
+
+Name : Nishit Sadhwani
+UFID : 5393-5598
+Email: nishit@cise.ufl.edu , n.sadhwani@ufl.edu
+
+Subject Code : COP 4600
+
+Project 1 :
+Implementing a new system call in Minix 3, along with alibrary function that
+allows it to be conviniently called from a c program.
+
+
+This document is a manual page for the library procedure BCCTL.
+
+***************************************************************************
+*/
+
+Name :
+	BCCTL
+Syntax :
+	int bcctl ( pid_t , int * , int )
+
+Parameters :
+	pid_t pro;
+	It is used to store the process ID of the running process.
+	
+	int * val;
+	This is used to store the value of BC returned by the system call
+
+	int mode;
+	This is used to store the mode of operation 
+	( i.e
+		Read : 0 ;,
+		Reset: 1 ;,
+		Increment :2 )
+	
+Description :
+	The library function is mainly used to invoke a system call and store
+	the value of BC which is returned by BC.
+	The library function stores the values of process ID ( which is sent by the
+	test file ), and the mode of operation in the message m. It then passes
+	the message m to the system call using (_syscall(PM_PROC_NR, BCCTL, &m ).
+	This system call calls BCCTL, located in the server pm.
+	It then stores the value returned by the system call and then returns the 
+	status of call to the user ( 0 or -1), according to the value of BC returned 
+	by the system call.
+
+Variables Used :
+	
+	message m;
+	There is a structure defined in lib.h , the speciality is that, we can use the 
+	variables of structure ( using the object of structure ) and store values in it. Adding to it,
+	these values can be accessed globaly.
+	So I stored the pid and mode in these variables using the statements :
+		m.m1_i1= pro;
+		m.m1_i3= mode;
+	
+Return Value :
+	It returns the status of call, if the system call returns 404, that means that there is some
+	error, thus this function will return -1 ,which signifies that the call was unsuccessful.
+	It returns 0, if the call was successful.
+
+
+

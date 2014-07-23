@@ -1,0 +1,63 @@
+/*
+**************************************************************************
+
+Name : Nishit Sadhwani
+UFID : 5393-5598
+Email: nishit@cise.ufl.edu , n.sadhwani@ufl.edu
+
+Subject Code : COP 4600
+
+Project 2 :
+To increment the BC value whenever the process has another CPU burst, and to write 
+small (I/O based ), Medium ( Little I/O and more computation ), 
+Long ( Only Computation and memory access ) test programs and to display their BC values.
+
+
+
+This document is a manual page for the library procedure SYS_BCCTL.
+
+***************************************************************************
+*/
+
+Name :
+	SYS_BCCTL
+Syntax :
+	int sys_bcctl(endpoint_t proc_ep, int mode)
+
+Parameters :
+	endpoint_t proc_ep;
+	It is used to store the endpoint of the current process, given by do_bcctl
+	
+	unsigned long value;
+	This is used to store the value of BC returned by the kernel call
+
+	int mode;
+	This is used to store the mode of operation 
+	( i.e
+		Read : 0 ;,
+		Reset: 1 ;,
+		Increment :2 )
+	
+Description :
+	The library function is mainly used to invoke a kernel call and store
+	the value of BC which is returned by the kernel call.
+        The library function stores the values of endpoint of the current process
+	( which is sent by the do_bcctl in PM ), and the mode of operation in the message m. 
+	It then passes the message m to the kernel call using (_kernel_call(SYS_BCCTL, &m).
+	This system call calls do_bcctl in kernel ( as sys_bcctl is mapped to it ).
+	It then stores the value returned by the kernel call and then returns the same
+	value to the do_bcctl in PM.
+
+Variables Used :
+	
+	message m;
+	There is a structure defined in lib.h , the speciality is that, we can use the 
+	variables of structure ( using the object of structure ) and store values in it. Adding to it,
+	these values can be accessed globaly.
+	So I stored the endpoint and mode in these variables using the statements :
+		m.m1_i1= proc_ep;
+		m.m1_i3= mode;
+	
+Return Value :
+	It returns the value of BC which is returned by the kernel call.
+

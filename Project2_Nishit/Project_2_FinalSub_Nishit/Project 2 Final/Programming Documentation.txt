@@ -1,0 +1,144 @@
+/*
+**************************************************************************
+
+Name : Nishit Sadhwani
+UFID : 5393-5598
+Email: nishit@cise.ufl.edu , n.sadhwani@ufl.edu
+
+Subject Code : COP 4600
+
+Project 2 :
+To increment the BC value whenever the process has another CPU burst, and to write 
+small (I/O based ), Medium ( Little I/O and more computation ), 
+Long ( Only Computation and memory access ) test programs and to display their BC values.
+
+This document explains, how I implemented the kernel call and counted the
+number of CPU bursts and correspondingly incremented the BC value , it contains
+the changes that I made and the reasons behind making those changes. 
+This document also describes how testing and debugging was done and the errors.
+
+***************************************************************************
+*/
+
+I had planned to implement this project using my old project 1 and then interacting between the Scheduler and PM and
+also the scheduler and kernel. But later I decided that the easier task would be to implement a kernel call, and
+do everything that I did in project 1 in the kernel, and then find out where to catch the burst count.
+I basically implemented a system call first and then used it to call the kernel.
+
+
+
+Programming :
+
+Steps Involved in adding a KERNEL call and incrementing BC value corresponding to Burst count :
+
+Step 1 : Adding the library function to unistd.h ( located in /usr/src/include )
+	I added the function prototype i.e. int bcctl(pid_t, unsigned long *, int ), which is used to invoke a system call. 
+	This declaration is done in unistd.h because, it is visible to all user programs.
+
+Step 2 : Declaration of function body in ( /usr/src/lib/libc/sys-minix )
+	I made a file bcctl.c, which contains the function body for the function bcctl(pid_t, unsigned long *, int ), the function body
+	stores the process ID for the current process in message m, and also stores the mode of operation. It then performs a 
+	system call (_syscall(PM_PROC_NR,BCCTL,&m)), and stores the value of BC returned by the system call.
+	Now if the value returned by system call is positve and the mode is READ, then it prints the BC value to the console and returns the
+	status of the call back to the test program, and if the mode is anything other than read then it just returns the status of call.
+	I also added it to the Makefile.inc
+	A detailed explanation of this library function is given in the MAN_PAGE.
+
+Step 3 : Using an unused call number
+	I then made some changes to the file callnr.h ( /usr/src/include/minix ) .
+	I used the value 69 and assigned it to my call i.e. #define BCCTL 69 . This completes my 2nd parameter that I use for making
+	a system call.
+
+Step 4 : Defining function prototype for do_bcctl in proto.h ( /usr/src/servers/pm )
+	I had the system call requested in my library function, now the server pm is supposed to handle it. So, I define the function 
+	prototype here, i.e int do_bcctl(void).
+
+Step 5 : Register system call in table.c ( /usr/src/servers/pm )
+	I added a line do_bcctl corresponding to the number 69, in the file table.c. This is used for registering the system call,
+	similar to what I did in callnr.h.
+
+Step 6  : Function Body of do_bcctl ( /usr/src/servers/pm/ misc.c)
+	I made the function body of do_bcctl in misc.c. The function body calls the function sys_bcctl with the parameters ( endpoint of current 
+	process and the mode ), the mode was for testing the project 1, and do_bcctl stores the value returned by that function in
+	a variable called BC_val and then returns it to bcctl.
+
+Step 7 : I then defined the function prototype for sys_bcctl in ( /usr/src/include/minix/syslib.h )
+
+Step 8 : I then defined the sys_bcctl as a kernel call number 57 in ( /usr/src/include/minix/com.h )
+	#define SYS_BCCTL (KERNEL_CALL + 57)
+ 
+Step 9 : The next step was to define the function body of sys_bcctl ( /usr/src/lib/libsys )
+	This function took the endpoint of the current process as a parameter and then stores it in a global
+	variable, and then makes a kernel_call value= _kernel_call(SYS_BCCTL, &m), It then returns this value.
+
+Step 10: The next step was to map this to do_bcctl ( yet to be deined ).
+	I mapped this with do_bcctl in ( /usr/src/kernel/system.c ).
+
+Step 11: Next I declared the prototype for the function do_bcctl in kernel.
+	I did this in (/usr/src/kernel/system.h)
+	int do_bcctl(struct proc * caller, message *m_ptr), the parameters it takes are a pointer to the caller and a message pointer.
+
+Step 12 : Declaring variable p_BC and p_cpu_burst_count in process table , located in proc.h ( /usr/src/kernel ).
+
+Step 13 : Initialization of variable p_BC and p_cpu_burst_count in proc.c ( /usr/src/kernel)
+	I initialized the two variables to 0, where all the scheduling variables are initialized to 0.
+
+Step 14: The next step was to define the body for do_bcctl, I did that in ( /usr/src/kernel/system )
+	This function stores the endpoint of the current process and checks whether that is valid of not,
+	If invalid, it prints a message Invalid Endpoint and returns an EINVAL.
+	If endpoint is fine, then it returns the value of BC for current process which signifies the burst count.
+	I also added it to Makefile.
+
+Step 15: Comparing the definition of cpu burst to the definition of variable p_accounting.ipc_sync and the value it stores,
+	It seemed analogous, so I incremented the value of both BC and CPU burst count everytime ipc_sync gets incremented.
+ 
+Step 16 : Running the make install commands for compiling 
+	For new kernel call(/usr/src/commands/services )
+	make clean
+	make
+	make install
+
+	make install ( /usr/src/releasetools)
+	make do-lib  ( /usr/src/ )
+	reboot
+	
+Step 17 : Making the test function
+	I made 3 different test functions as described in the project description.
+	I also make a make file for the three test functions.
+
+step 18 : You can also run the three test programs parallely, running 
+	sh my_run.sh
+
+
+Testing and Debugging :
+
+I used various printf statements to see how things are working, like printing the directory in which the code is.
+That helped me to understand the flow structure. I also used printf statements to print the value of different 
+variables like p_cpu_time_left, p_accounting.ipc_sync, p_BC,p_cpu_burst_count in the kernel, so that I could know the
+values.
+I also used printf statements at various modules to see if correct values are being returned.
+
+Errors and bugs :
+
+I had to deal with plethora of errors, some of them which I remember are :
+
+	- SYSTEM: Denied request 57 to 0
+		This error was because, the kernel didn't allow the call number 57, I then swapped some other call with
+	 my call, then I saw that specifically call number 57 was being denied.
+	 I then asked the TA, he then helped me out with it and asked me to follow a procedure in /usr/src/commands/services.
+	 After doing that the kernel call worked.
+
+	- Another error that I faced was related to, the unsigned long value, I was trying to store an unsigned long value in
+	 an int, so that was giving some unexpected results.
+
+	- MINIX Panicked
+	 I face this as fell, I had a backup of files luckily, so I then reinstalled MINIX and worked with it.
+
+	-Memory Core Dumped :
+	 This was probably because I didn't use a proper address or didn't use an address at all.
+
+	
+Output :
+
+I have attached an output file as well, which shows the successful implementation of all the aspects 
+of project 2.

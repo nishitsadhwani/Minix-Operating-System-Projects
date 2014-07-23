@@ -1,0 +1,114 @@
+/*
+**************************************************************************
+
+Name : Nishit Sadhwani
+UFID : 5393-5598
+Email: nishit@cise.ufl.edu , n.sadhwani@ufl.edu
+
+Subject Code : COP 4600
+
+Project 1 :
+Implementing a new system call in Minix 3, along with alibrary function that
+allows it to be conviniently called from a c program.
+
+
+This document explains, how I implemented the system call, the changes that I
+made and the reasons behind making those changes. This document also describes 
+how testing and debugging was done and the errors.
+
+***************************************************************************
+*/
+
+I started with the installation of Minix 3.2.1 in VMware player, after the process of installation was completed
+I installed additional packages in Minix, namely gcc,openssh,vim etc.
+
+Programming :
+I was familiar with the C programming language and the VI editor as well, so I directly jumped into the implementation
+part according to the tutorials provided by our TA.
+
+Steps Involved in adding a system call :
+
+Step 1 : Adding the library function to unistd.h ( located in /usr/src/include )
+	I added the function prototype i.e. int bcctl(pid_t, int *, int ), which is used to invoke a system call. 
+	This declaration is done in unistd.h because, it is visible to all user programs.
+
+Step 2 : Declaration of function body in ( /usr/src/lib/libc/sys-minix )
+	I made a file bcctl.c, which contains the function body for the function bcctl(pid_t, int *, int ), the function body
+	stores the process ID for the current process in message m, and also stores the mode of operation. It then performs a 
+	system call (_syscall(PM_PROC_NR,BCCTL,&m)), and stores the value of BC returned by the system call.
+	It then returns the status of the call to the test file.
+	I also added it to the Makefile.inc
+	A detailed explanation of this library function is given in the MAN_PAGE.
+
+Step 3 : Using an unused call number
+	I then made some changes to the file callnr.h ( /usr/src/include/minix ) .
+	I used the value 69 and assigned it to my call i.e. #define BCCTL 69 . This completes my 2nd parameter that I use for making
+	a system call.
+
+Step 4 : Defining function prototype for do_bcctl in proto.h ( /usr/src/servers/pm )
+	I had the system call requested in my library function, now the server pm is supposed to handle it. So, I define the function 
+	prototype here, i.e int do_bcctl(void).
+
+Step 5 : Register system call in table.c ( /usr/src/servers/pm )
+	I added a line do_bcctl corresponding to the number 69, in the file table.c. This is used for registering the system call,
+	similar to what I did in callnr.h.
+
+Step 6 : Declaring variable BC in process table 
+	I added the variable BC to the process table, located in mproc.h ( /usr/src/servers/pm ).
+
+Step 7 : Initialization of variable BC in main.c ( /usr/src/servers/pm )
+	I initialized the variable BC , by adding the line rmc->BC = 0, where rmc is a pointer which is used for accessing the variables 
+	declared in process table.
+	I initialized it over here because, everytime the process manager runs, the variables are initialized over here.
+
+Step 8 : Function Body of do_bcctl 
+	I made the function body of do_bcctl in misc.c. The function body compares the pid sent by the library function to the pid of 
+	current process. Once the pid matches, the object of structure defined in the process table is used to access the variable BC.
+	mproc[i].BC.
+	Then it compares the modes and returns the corresponding value of BC.
+
+Step 9 : Making the test function
+	I made the test function , which asks the user for mode and then enters a switch condition and calls bcctl(). It then asks the user 
+	if he/she wants to continue or not.
+ 
+Step 10 : Running the make install commands for compiling 
+	make install ( /usr/src/releasetools)
+	make do-lib  ( /usr/src/ )
+
+Step 11 : Compile testtq.c and view the output.
+
+
+Testing and Debugging :
+
+I used various printf statements to see how things are working, like
+I used printf (" \n In /usr/src/lib/libc/sys-minix " ); , to know that my call has
+reached the library function BCCTL. Then I used another printf i.e.
+printf ("\n Reached Misc. c ");statement in the do_bcctl (which I know is a bad programming practise ).
+Once I was done with the linking part i.e test -- > bcctl --> do_bcctl --> bcctl --> test--> output, 
+I had the problem of accessing the variable BC, then I figured it out, and used another set of printf
+statements to understand the value that BC had, the value that is being stored in the pointer variable etc.
+
+
+Errors and bugs :
+
+I had to deal with plethora of errors, some of them which I remember are :
+
+	-Memory Core Dumped :
+	 This was probably because I didn't use a proper address or didn't use an address at all.
+
+	-Undefined reference to bcctl :
+	 This was probably because, every time I did a make do-lib, the declaration of bcctl in callnr.h
+	 used to be resetted.
+
+	-Couldn't Initialize the variable BC in mproc.h :
+	 I used various different syntax to initialize a variable in struct, but it was not possible.
+	 like : mproc[NR_PROCS] = {.BC=0}
+
+	-I didn't know the upper limit of process ID's, so I was running an infinite loop earlier.
+
+	- There were a few errors with accessing the address of variable BC and storing it the pointer.
+
+Output :
+
+I have attached an output file as well, which shows the successful implementation of all the aspects 
+of project 1.

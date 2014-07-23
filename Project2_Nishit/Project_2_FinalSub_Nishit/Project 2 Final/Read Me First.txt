@@ -1,0 +1,6 @@
+- The MAN pages are located in the lib directory, where the library functions are.
+- The test files are in test files, you can use make, all of them will be compiled.
+  You can run them individually.
+   If you wish to run the tests in parallel, use the shell file "my_run.sh"
+   First use 'make' and the 'sh my_run.sh' commands.
+- The Programming documentation is in the outer directory.
